@@ -1,89 +1,115 @@
-// --- Constants ---
+// --- CONFIG ---
 const clientId = "f4bc390330824ced9bb1276bb947f315";
+const redirectUri = "https://spindle.click/callback.html";
 const scopes = ["playlist-read-private", "user-library-read"];
 
-// --- Login Button ---
-const loginBtn = document.getElementById("loginBtn");
-if (loginBtn) {
-  loginBtn.addEventListener("click", () => {
-    const redirectUri = "https://spindle.click/callback.html"; // must match dashboard
-    const authUrl =
-      "https://accounts.spotify.com/authorize" +
-      "?client_id=f4bc390330824ced9bb1276bb947f315" +
-      "&response_type=token" +
-      "&redirect_uri=" + encodeURIComponent(redirectUri) +
-      "&scope=" + encodeURIComponent(["playlist-read-private", "user-library-read"].join(" "));
-      window.location.href = authUrl;
+// --- HELPERS ---
+function generateRandomString(length) {
+  let text = '';
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < length; i++) text += possible.charAt(Math.floor(Math.random() * possible.length));
+  return text;
+}
+
+async function sha256(plain) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(hash)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// --- LOGIN BUTTON ---
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const codeVerifier = generateRandomString(128);
+  localStorage.setItem("code_verifier", codeVerifier);
+  const codeChallenge = await sha256(codeVerifier);
+
+  const authUrl = "https://accounts.spotify.com/authorize" +
+    "?response_type=code" +
+    "&client_id=" + clientId +
+    "&scope=" + encodeURIComponent(scopes.join(" ")) +
+    "&redirect_uri=" + encodeURIComponent(redirectUri) +
+    "&code_challenge_method=S256" +
+    "&code_challenge=" + codeChallenge;
+
+  window.location.href = authUrl;
+});
+
+// --- FETCH PLAYLISTS & RECOMMENDATIONS ---
+async function fetchPlaylists(token) {
+  const headers = { Authorization: "Bearer " + token };
+  const res = await fetch("https://api.spotify.com/v1/me/playlists", { headers });
+  const data = await res.json();
+  const container = document.getElementById("playlists");
+  container.innerHTML = "<h2>Your Playlists</h2>";
+
+  data.items.forEach(pl => {
+    const btn = document.createElement("button");
+    btn.textContent = pl.name;
+    btn.onclick = () => fetchRecommendations(pl.id, token);
+    btn.style.margin = "5px";
+    container.appendChild(btn);
   });
 }
 
-// --- On Page Load ---
-window.onload = async () => {
-  const token = localStorage.getItem("spotify_token");
-  if (!token) return; // Not logged in
-
+async function fetchRecommendations(playlistId, token) {
   const headers = { Authorization: "Bearer " + token };
+  const tracksRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, { headers });
+  const tracksData = await tracksRes.json();
 
-  // Fetch user's playlists
-  try {
-    const playlistsRes = await fetch("https://api.spotify.com/v1/me/playlists", { headers });
-    const playlistsData = await playlistsRes.json();
+  const firstTrack = tracksData.items.find(i => i.track && i.track.id);
+  if (!firstTrack) { alert("No valid tracks in this playlist."); return; }
+  const seedTrack = firstTrack.track.id;
 
-    const container = document.getElementById("playlists");
-    if (!container) return;
+  const recRes = await fetch(`https://api.spotify.com/v1/recommendations?seed_tracks=${seedTrack}&limit=10`, { headers });
+  const recData = await recRes.json();
 
-    container.innerHTML = "<h2>Your Playlists</h2>";
-
-    playlistsData.items.forEach(playlist => {
-      const button = document.createElement("button");
-      button.textContent = playlist.name;
-      button.style.margin = "5px";
-      button.onclick = () => selectPlaylist(playlist.id, token);
-      container.appendChild(button);
-    });
-  } catch (err) {
-    console.error("Error fetching playlists:", err);
-  }
-};
-
-// --- Select Playlist & Fetch Recommendations ---
-async function selectPlaylist(playlistId, token) {
-  const headers = { Authorization: "Bearer " + token };
-
-  try {
-    // Get tracks from selected playlist
-    const tracksRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, { headers });
-    const tracksData = await tracksRes.json();
-
-    // Use first valid track as seed
-    const firstTrack = tracksData.items.find(item => item.track && item.track.id);
-    if (!firstTrack) {
-      alert("Couldn't find a valid track in this playlist.");
-      return;
-    }
-    const seedTrackId = firstTrack.track.id;
-
-    // Get recommendations
-    const recRes = await fetch(`https://api.spotify.com/v1/recommendations?seed_tracks=${seedTrackId}&limit=10`, { headers });
-    const recData = await recRes.json();
-
-    const recContainer = document.getElementById("recommendations");
-    if (!recContainer) return;
-
-    recContainer.innerHTML = "<h2>Recommended Songs</h2>";
-
-    recData.tracks.forEach(track => {
-      const card = document.createElement("div");
-      card.style.margin = "15px 0";
-      card.innerHTML = `
-        <p><strong>${track.name}</strong> by ${track.artists[0].name}</p>
-        <img src="${track.album.images[0]?.url}" width="200"/>
-        <br><a href="${track.external_urls.spotify}" target="_blank">Open in Spotify</a>
-      `;
-      recContainer.appendChild(card);
-    });
-
-  } catch (err) {
-    console.error("Error fetching recommendations:", err);
-  }
+  const recContainer = document.getElementById("recommendations");
+  recContainer.innerHTML = "<h2>Recommended Songs</h2>";
+  recData.tracks.forEach(track => {
+    const div = document.createElement("div");
+    div.style.margin = "15px 0";
+    div.innerHTML = `
+      <p><strong>${track.name}</strong> by ${track.artists[0].name}</p>
+      <img src="${track.album.images[0]?.url}" width="200"/>
+      <br><a href="${track.external_urls.spotify}" target="_blank">Open in Spotify</a>
+    `;
+    recContainer.appendChild(div);
+  });
 }
+
+// --- ON LOAD: HANDLE PKCE REDIRECT ---
+async function handleRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+  if (!code) return; // Not redirected from Spotify
+
+  const codeVerifier = localStorage.getItem("code_verifier");
+  const body = new URLSearchParams({
+    client_id: clientId,
+    grant_type: "authorization_code",
+    code: code,
+    redirect_uri: redirectUri,
+    code_verifier: codeVerifier
+  });
+
+  const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body
+  });
+
+  const tokenData = await tokenRes.json();
+  localStorage.setItem("spotify_token", tokenData.access_token);
+
+  // Redirect back to main app
+  window.location.href = "https://spindle.click/";
+}
+
+// --- MAIN ---
+(async () => {
+  await handleRedirect();
+  const token = localStorage.getItem("spotify_token");
+  if (token) fetchPlaylists(token);
+})();
