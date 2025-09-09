@@ -1,7 +1,7 @@
 // app.js
 
-const clientId = 'YOUR_CLIENT_ID';
-const redirectUri = 'http://localhost:5500/callback.html';
+const clientId = 'f4bc390330824ced9bb1276bb947f315';
+const redirectUri = 'https://spindle.click/callback.html';
 const scopes = ['playlist-read-private', 'user-library-read'];
 
 document.getElementById('loginBtn').addEventListener('click', () => {
