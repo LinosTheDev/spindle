@@ -7,12 +7,12 @@ const scopes = ["playlist-read-private", "user-library-read"];
 const loginBtn = document.getElementById("loginBtn");
 if (loginBtn) {
   loginBtn.addEventListener("click", () => {
-    const authUrl =
-      "https://accounts.spotify.com/authorize" +
-      "?client_id=" + clientId +
-      "&response_type=token" +
-      "&redirect_uri=" + encodeURIComponent(redirectUri) +
-      "&scope=" + encodeURIComponent(scopes.join(" "));
+const authUrl =
+    "https://accounts.spotify.com/authorize" +
+    "?client_id=f4bc390330824ced9bb1276bb947f315" +
+    "&response_type=token" +
+    "&redirect_uri=" + encodeURIComponent("https://spindle.click/callback.html") +
+    "&scope=" + encodeURIComponent(["playlist-read-private", "user-library-read"].join(" "));
     window.location.href = authUrl;
   });
 }
