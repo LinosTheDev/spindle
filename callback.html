@@ -1,14 +1,26 @@
+<!-- callback.html -->
 <!DOCTYPE html>
 <html>
+<head>
+  <title>Spotify Callback</title>
+</head>
 <body>
+  <p>Logging you in...</p>
   <script>
-    // Extract access token from URL hash
+    // Get access token from URL hash
     const hash = window.location.hash.substring(1);
     const params = new URLSearchParams(hash);
     const accessToken = params.get("access_token");
 
-    localStorage.setItem("spotify_token", accessToken);
-    window.location.href = "index.html";
+    if (accessToken) {
+      localStorage.setItem("spotify_token", accessToken);
+      // Redirect back to main app
+      window.location.href = "https://spindle.click/";
+    } else {
+      // Error or token missing
+      alert("Failed to log in. Make sure your Spotify redirect URI is correct.");
+      console.error("Spotify token not found in URL hash:", hash);
+    }
   </script>
 </body>
 </html>
