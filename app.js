@@ -1,17 +1,18 @@
 const clientId = "f4bc390330824ced9bb1276bb947f315";
-const redirectUri = "https://spindle.click/";
 const scopes = ["playlist-read-private", "user-library-read"];
 
 // --- LOGIN BUTTON ---
 document.getElementById("loginBtn").addEventListener("click", () => {
-  const authUrl =
-    "https://accounts.spotify.com/authorize" +
-    "?client_id=" + clientId +
-    "&response_type=token" +
-    "&redirect_uri=" + encodeURIComponent(redirectUri) +
-    "&scope=" + encodeURIComponent(scopes.join(" "));
+  const redirectUri = "https://spindle.click/";
 
-  window.location.href = authUrl;
+const authUrl =
+  "https://accounts.spotify.com/authorize" +
+  "?client_id=f4bc390330824ced9bb1276bb947f315" +
+  "&response_type=token" +
+  "&redirect_uri=" + encodeURIComponent(redirectUri) +
+  "&scope=" + encodeURIComponent(["playlist-read-private","user-library-read"].join(" "));
+
+window.location.href = authUrl;
 });
 
 // --- GET TOKEN FROM URL HASH ---
