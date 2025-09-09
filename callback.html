@@ -1,25 +1,24 @@
 <!-- callback.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Spotify Callback</title>
+  <meta charset="UTF-8">
+  <title>Spindle Spotify Callback</title>
 </head>
 <body>
   <p>Logging you in...</p>
   <script>
-    // Get access token from URL hash
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get("access_token");
-
-    if (accessToken) {
-      localStorage.setItem("spotify_token", accessToken);
-      // Redirect back to main app
-      window.location.href = "https://spindle.click/";
+    // Spotify redirects here with ?code=AUTH_CODE
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (!code) {
+      alert("No code found. Check your redirect URI and login flow.");
+      console.error("Spotify redirect params:", window.location.search);
     } else {
-      // Error or token missing
-      alert("Failed to log in. Make sure your Spotify redirect URI is correct.");
-      console.error("Spotify token not found in URL hash:", hash);
+      // Keep the code in localStorage for app.js to exchange
+      localStorage.setItem("spotify_code", code);
+      // Redirect to main page, app.js will handle token exchange
+      window.location.href = "https://spindle.click/";
     }
   </script>
 </body>
