@@ -1,19 +1,19 @@
 // --- Constants ---
 const clientId = "f4bc390330824ced9bb1276bb947f315";
-const redirectUri = "https://spindle.click/callback.html";
 const scopes = ["playlist-read-private", "user-library-read"];
 
 // --- Login Button ---
 const loginBtn = document.getElementById("loginBtn");
 if (loginBtn) {
   loginBtn.addEventListener("click", () => {
-const authUrl =
-    "https://accounts.spotify.com/authorize" +
-    "?client_id=f4bc390330824ced9bb1276bb947f315" +
-    "&response_type=token" +
-    "&redirect_uri=" + encodeURIComponent("https://spindle.click/callback.html") +
-    "&scope=" + encodeURIComponent(["playlist-read-private", "user-library-read"].join(" "));
-    window.location.href = authUrl;
+    const redirectUri = "https://spindle.click/callback.html"; // must match dashboard
+    const authUrl =
+      "https://accounts.spotify.com/authorize" +
+      "?client_id=f4bc390330824ced9bb1276bb947f315" +
+      "&response_type=token" +
+      "&redirect_uri=" + encodeURIComponent(redirectUri) +
+      "&scope=" + encodeURIComponent(["playlist-read-private", "user-library-read"].join(" "));
+      window.location.href = authUrl;
   });
 }
 
