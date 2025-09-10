@@ -140,19 +140,8 @@ async function fetchRecommendations(playlistId, token) {
     const recDataRaw = await recRes.json();
     console.log("Raw ReccoBeats response:", recDataRaw);
 
-    // --- Defensive check: ensure it's an array ---
-    let recData = [];
-    if (Array.isArray(recDataRaw)) {
-      recData = recDataRaw;
-    } else if (recDataRaw.data && Array.isArray(recDataRaw.data)) {
-      recData = recDataRaw.data;
-    } else if (recDataRaw.tracks && Array.isArray(recDataRaw.tracks)) {
-      recData = recDataRaw.tracks;
-    } else {
-      console.warn("ReccoBeats returned unexpected structure:", recDataRaw);
-      return alert("Unexpected response from ReccoBeats. See console for details.");
-    }
-
+    // --- Extract array from content property ---
+    const recData = Array.isArray(recDataRaw.content) ? recDataRaw.content : [];
     if (recData.length === 0) return alert("No recommendations found from ReccoBeats.");
 
     // --- Display recommendations ---
