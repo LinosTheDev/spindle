@@ -141,12 +141,14 @@ async function fetchRecommendations(playlistId, token) {
     console.log("Raw ReccoBeats response:", recDataRaw);
 
     // --- Use content array directly ---
-    const recData = recDataRaw.content || [];
-    if (!Array.isArray(recData) || recData.length === 0) return alert("No recommendations found from ReccoBeats.");
+    const recData = recDataRaw.content;
+    if (!Array.isArray(recData) || recData.length === 0) {
+      return alert("No recommendations found from ReccoBeats.");
+    }
 
     // --- Display recommendations ---
     const recContainer = document.getElementById("recommendations");
-    recContainer.innerHTML = "<h2>Recommended Songs</h2>";
+    recContainer.innerHTML = "<h2>Recommended Songs</h2>"; // clear previous recommendations
 
     recData.forEach(t => {
       const div = document.createElement("div");
