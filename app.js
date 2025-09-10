@@ -125,13 +125,11 @@ async function fetchRecommendations(playlistId, token) {
     const firstTrack = tracksData.items.find(i => i.track && i.track.id);
     if (!firstTrack) return alert("No valid tracks in this playlist.");
 
-    const seedId = firstTrack.track.id; // Spotify track ID
-
-    console.log("Using seed track ID:", seedId);
+    const seedId = firstTrack.track.id;
+    console.log("Seed track ID:", seedId);
 
     // --- Fetch recommendations from ReccoBeats ---
     const recRes = await fetch(`https://api.reccobeats.com/v1/track/recommendation?seeds=${seedId}&size=10`);
-
     if (!recRes.ok) {
       console.error("ReccoBeats response status:", recRes.status, recRes.statusText);
       if (recRes.status === 400) return alert("Bad request to ReccoBeats. Seed track may be invalid.");
@@ -142,8 +140,19 @@ async function fetchRecommendations(playlistId, token) {
     const recDataRaw = await recRes.json();
     console.log("Raw ReccoBeats response:", recDataRaw);
 
-    // --- Normalize response: use array of tracks ---
-    const recData = Array.isArray(recDataRaw) ? recDataRaw : recDataRaw.data || [];
+    // --- Defensive check: ensure it's an array ---
+    let recData = [];
+    if (Array.isArray(recDataRaw)) {
+      recData = recDataRaw;
+    } else if (recDataRaw.data && Array.isArray(recDataRaw.data)) {
+      recData = recDataRaw.data;
+    } else if (recDataRaw.tracks && Array.isArray(recDataRaw.tracks)) {
+      recData = recDataRaw.tracks;
+    } else {
+      console.warn("ReccoBeats returned unexpected structure:", recDataRaw);
+      return alert("Unexpected response from ReccoBeats. See console for details.");
+    }
+
     if (recData.length === 0) return alert("No recommendations found from ReccoBeats.");
 
     // --- Display recommendations ---
