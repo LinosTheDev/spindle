@@ -108,9 +108,10 @@ async function fetchRecommendations(playlistId, token) {
   const headers = { Authorization: `Bearer ${token}` };
 
   try {
-    // Playlist info
+    // --- Get playlist metadata ---
     const playlistInfo = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, { headers }).then(r => r.json());
 
+    // --- Display playlist info ---
     const plDiv = document.getElementById("playlists");
     plDiv.innerHTML = `
       <h2>${playlistInfo.name}</h2>
@@ -119,24 +120,33 @@ async function fetchRecommendations(playlistId, token) {
       <p><em>Here's what ReccoBeats suggests based on this playlist:</em></p>
     `;
 
-    // First track
+    // --- Get first track from playlist ---
     const tracksData = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, { headers }).then(r => r.json());
     const firstTrack = tracksData.items.find(i => i.track && i.track.id);
     if (!firstTrack) return alert("No valid tracks in this playlist.");
-    const seedId = firstTrack.track.id;
 
-    // Fetch from ReccoBeats
+    const seedId = firstTrack.track.id; // Spotify track ID
+
+    console.log("Using seed track ID:", seedId);
+
+    // --- Fetch recommendations from ReccoBeats ---
     const recRes = await fetch(`https://api.reccobeats.com/v1/track/recommendation?seeds=${seedId}&size=10`);
+
     if (!recRes.ok) {
+      console.error("ReccoBeats response status:", recRes.status, recRes.statusText);
+      if (recRes.status === 400) return alert("Bad request to ReccoBeats. Seed track may be invalid.");
       if (recRes.status === 429) return alert("Hit ReccoBeats rate limit. Try again later.");
-      throw new Error(`ReccoBeats fetch failed: ${recRes.status}`);
+      throw new Error(`ReccoBeats error: ${recRes.status}`);
     }
 
     const recDataRaw = await recRes.json();
-    // ReccoBeats response may wrap tracks in 'data' property
+    console.log("Raw ReccoBeats response:", recDataRaw);
+
+    // --- Normalize response: use array of tracks ---
     const recData = Array.isArray(recDataRaw) ? recDataRaw : recDataRaw.data || [];
     if (recData.length === 0) return alert("No recommendations found from ReccoBeats.");
 
+    // --- Display recommendations ---
     const recContainer = document.getElementById("recommendations");
     recContainer.innerHTML = "<h2>Recommended Songs</h2>";
 
@@ -152,7 +162,7 @@ async function fetchRecommendations(playlistId, token) {
     });
 
   } catch (err) {
-    console.error(err);
-    alert("Failed to fetch ReccoBeats recommendations.");
+    console.error("Failed to fetch ReccoBeats recommendations:", err);
+    alert("Failed to fetch ReccoBeats recommendations. See console for details.");
   }
 }
