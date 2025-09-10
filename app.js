@@ -97,22 +97,49 @@ async function loadSpotify(token) {
 async function fetchRecommendations(playlistId, token) {
   const headers = { Authorization: `Bearer ${token}` };
 
-  const tracks = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, { headers }).then(r => r.json());
-  const firstTrack = tracks.items.find(t => t.track && t.track.id);
-  if (!firstTrack) return alert("No valid track in playlist");
+  // Get playlist metadata
+  const playlistInfo = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, { headers }).then(r => r.json());
 
-  const seed = firstTrack.track.id;
-  const recs = await fetch(`https://api.spotify.com/v1/recommendations?seed_tracks=${seed}&limit=10`, { headers }).then(r => r.json());
+  // Display playlist name & image
+  const plDiv = document.getElementById("playlists");
+  plDiv.innerHTML = `
+    <h2>${playlistInfo.name}</h2>
+    ${playlistInfo.images[0] ? `<img src="${playlistInfo.images[0].url}" width="300" style="border-radius: 10px; margin-bottom: 1rem;" />` : ''}
+    <p><strong>${playlistInfo.tracks.total}</strong> track(s)</p>
+    <p><em>Here's what ReccoBeats suggests based on this playlist:</em></p>
+  `;
 
-  const recDiv = document.getElementById("recommendations");
-  recDiv.innerHTML = "<h2>Recommendations</h2>";
-  recs.tracks.forEach(t => {
-    const el = document.createElement("div");
-    el.innerHTML = `
-      <p><strong>${t.name}</strong> by ${t.artists.map(a => a.name).join(", ")}</p>
-      <img src="${t.album.images[0]?.url}" width="200"><br>
-      <a href="${t.external_urls.spotify}" target="_blank">Open in Spotify</a><br><br>
-    `;
-    recDiv.appendChild(el);
-  });
+  // Get first track
+  const tracksData = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, { headers }).then(r => r.json());
+  const firstTrack = tracksData.items.find(i => i.track && i.track.id);
+  if (!firstTrack) return alert("No valid tracks in this playlist.");
+
+  const seedId = firstTrack.track.id;
+
+  // Fetch recommendations from ReccoBeats
+  try {
+    const recRes = await fetch(`https://api.reccobeats.com/v1/track/recommendation?seeds=${seedId}&size=10`);
+    if (!recRes.ok) {
+      if (recRes.status === 429) return alert("Hit ReccoBeats rate limit. Try again later.");
+      throw new Error("ReccoBeats error");
+    }
+    const recData = await recRes.json();
+
+    const recContainer = document.getElementById("recommendations");
+    recContainer.innerHTML = "<h2>Recommended Songs</h2>";
+
+    recData.forEach(t => {
+      const div = document.createElement("div");
+      div.style.margin = "15px 0";
+      div.innerHTML = `
+        <p><strong>${t.trackTitle}</strong> by ${t.artists.map(a => a.name).join(", ")}</p>
+        <a href="${t.href}" target="_blank"><img src="https://via.placeholder.com/300?text=Album+Art" width="200" style="border-radius: 10px;" /></a>
+        <br><a href="${t.href}" target="_blank">Open in Spotify</a>
+      `;
+      recContainer.appendChild(div);
+    });
+  } catch (err) {
+    console.error(err);
+    alert("Failed to fetch ReccoBeats recommendations.");
+  }
 }
