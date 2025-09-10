@@ -51,21 +51,24 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
       code_verifier: codeVerifier
     });
 
-    const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body
-    });
+    try {
+      const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body
+      });
 
-    const tokenData = await tokenRes.json();
-
-    if (tokenData.access_token) {
-      localStorage.setItem("spotify_token", tokenData.access_token);
-      // Clean up the URL
-      window.history.replaceState({}, document.title, "/");
-      loadSpotify(tokenData.access_token);
-    } else {
-      alert("Failed to get token. Try logging in again.");
+      const tokenData = await tokenRes.json();
+      if (tokenData.access_token) {
+        localStorage.setItem("spotify_token", tokenData.access_token);
+        window.history.replaceState({}, document.title, "/");
+        loadSpotify(tokenData.access_token);
+      } else {
+        alert("Failed to get token. Try logging in again.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error obtaining Spotify token.");
     }
   } else {
     const token = localStorage.getItem("spotify_token");
@@ -73,57 +76,66 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
   }
 })();
 
+// --- Load User Profile & Playlists ---
 async function loadSpotify(token) {
   document.getElementById("loginBtn").style.display = "none";
-
   const headers = { Authorization: `Bearer ${token}` };
 
-  // User Profile
-  const user = await fetch("https://api.spotify.com/v1/me", { headers }).then(r => r.json());
-  document.getElementById("user").innerHTML = `<h2>Logged in as ${user.display_name}</h2>`;
+  try {
+    // User Profile
+    const user = await fetch("https://api.spotify.com/v1/me", { headers }).then(r => r.json());
+    document.getElementById("user").innerHTML = `<h2>Logged in as ${user.display_name}</h2>`;
 
-  // User Playlists
-  const playlists = await fetch("https://api.spotify.com/v1/me/playlists?limit=50", { headers }).then(r => r.json());
-  const plDiv = document.getElementById("playlists");
-  plDiv.innerHTML = "<h2>Your Playlists</h2>";
-  playlists.items.forEach(pl => {
-    const btn = document.createElement("button");
-    btn.textContent = pl.name;
-    btn.onclick = () => fetchRecommendations(pl.id, token);
-    plDiv.appendChild(btn);
-  });
+    // Playlists
+    const playlists = await fetch("https://api.spotify.com/v1/me/playlists?limit=50", { headers }).then(r => r.json());
+    const plDiv = document.getElementById("playlists");
+    plDiv.innerHTML = "<h2>Your Playlists</h2>";
+
+    playlists.items.forEach(pl => {
+      const btn = document.createElement("button");
+      btn.textContent = pl.name;
+      btn.onclick = () => fetchRecommendations(pl.id, token);
+      plDiv.appendChild(btn);
+    });
+  } catch (err) {
+    console.error(err);
+    alert("Failed to load Spotify profile or playlists.");
+  }
 }
 
+// --- Fetch Recommendations via ReccoBeats ---
 async function fetchRecommendations(playlistId, token) {
   const headers = { Authorization: `Bearer ${token}` };
 
-  // Get playlist metadata
-  const playlistInfo = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, { headers }).then(r => r.json());
-
-  // Display playlist name & image
-  const plDiv = document.getElementById("playlists");
-  plDiv.innerHTML = `
-    <h2>${playlistInfo.name}</h2>
-    ${playlistInfo.images[0] ? `<img src="${playlistInfo.images[0].url}" width="300" style="border-radius: 10px; margin-bottom: 1rem;" />` : ''}
-    <p><strong>${playlistInfo.tracks.total}</strong> track(s)</p>
-    <p><em>Here's what ReccoBeats suggests based on this playlist:</em></p>
-  `;
-
-  // Get first track
-  const tracksData = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, { headers }).then(r => r.json());
-  const firstTrack = tracksData.items.find(i => i.track && i.track.id);
-  if (!firstTrack) return alert("No valid tracks in this playlist.");
-
-  const seedId = firstTrack.track.id;
-
-  // Fetch recommendations from ReccoBeats
   try {
+    // Playlist info
+    const playlistInfo = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, { headers }).then(r => r.json());
+
+    const plDiv = document.getElementById("playlists");
+    plDiv.innerHTML = `
+      <h2>${playlistInfo.name}</h2>
+      ${playlistInfo.images[0] ? `<img src="${playlistInfo.images[0].url}" width="300" style="border-radius: 10px; margin-bottom: 1rem;" />` : ''}
+      <p><strong>${playlistInfo.tracks.total}</strong> track(s)</p>
+      <p><em>Here's what ReccoBeats suggests based on this playlist:</em></p>
+    `;
+
+    // First track
+    const tracksData = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, { headers }).then(r => r.json());
+    const firstTrack = tracksData.items.find(i => i.track && i.track.id);
+    if (!firstTrack) return alert("No valid tracks in this playlist.");
+    const seedId = firstTrack.track.id;
+
+    // Fetch from ReccoBeats
     const recRes = await fetch(`https://api.reccobeats.com/v1/track/recommendation?seeds=${seedId}&size=10`);
     if (!recRes.ok) {
       if (recRes.status === 429) return alert("Hit ReccoBeats rate limit. Try again later.");
-      throw new Error("ReccoBeats error");
+      throw new Error(`ReccoBeats fetch failed: ${recRes.status}`);
     }
-    const recData = await recRes.json();
+
+    const recDataRaw = await recRes.json();
+    // ReccoBeats response may wrap tracks in 'data' property
+    const recData = Array.isArray(recDataRaw) ? recDataRaw : recDataRaw.data || [];
+    if (recData.length === 0) return alert("No recommendations found from ReccoBeats.");
 
     const recContainer = document.getElementById("recommendations");
     recContainer.innerHTML = "<h2>Recommended Songs</h2>";
@@ -133,11 +145,12 @@ async function fetchRecommendations(playlistId, token) {
       div.style.margin = "15px 0";
       div.innerHTML = `
         <p><strong>${t.trackTitle}</strong> by ${t.artists.map(a => a.name).join(", ")}</p>
-        <a href="${t.href}" target="_blank"><img src="https://via.placeholder.com/300?text=Album+Art" width="200" style="border-radius: 10px;" /></a>
+        <a href="${t.href}" target="_blank"><img src="${t.albumArt || "https://via.placeholder.com/300?text=Album+Art"}" width="200" style="border-radius: 10px;" /></a>
         <br><a href="${t.href}" target="_blank">Open in Spotify</a>
       `;
       recContainer.appendChild(div);
     });
+
   } catch (err) {
     console.error(err);
     alert("Failed to fetch ReccoBeats recommendations.");
