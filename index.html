@@ -1,8 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Spindle</title>
+  <meta charset="UTF-8" />
+  <title>Spindle 🎵</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1db954, #191414);
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 3em;
+      margin: 1rem 0;
+    }
+
+    #loginBtn {
+      display: block;
+      margin: 2rem auto;
+      background-color: #1db954;
+      color: #fff;
+      border: none;
+      font-size: 1.2rem;
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    #loginBtn:hover {
+      background-color: #1ed760;
+    }
+
+    #user {
+      text-align: center;
+      font-size: 1.4rem;
+      margin-top: 1.5rem;
+    }
+
+    #playlists, #recommendations {
+      margin: 2rem auto;
+      max-width: 1000px;
+      padding: 0 1rem;
+    }
+
+    #playlists h2, #recommendations h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+      padding-bottom: 0.5rem;
+    }
+
+    #playlists button {
+      display: inline-block;
+      background: #282828;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      margin: 0.5rem;
+      border-radius: 30px;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.3s ease;
+    }
+
+    #playlists button:hover {
+      background: #1db954;
+      transform: scale(1.05);
+    }
+
+    #recommendations div {
+      background: #121212;
+      margin: 1rem auto;
+      padding: 1rem;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      max-width: 600px;
+    }
+
+    #recommendations img {
+      max-width: 100%;
+      border-radius: 10px;
+      margin-top: 0.5rem;
+    }
+
+    #recommendations a {
+      color: #1db954;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 0.5rem;
+    }
+
+    #recommendations a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
+      #playlists button {
+        width: 100%;
+        margin: 0.5rem 0;
+      }
+    }
+  </style>
 </head>
 <body>
   <h1>Spindle 🎵</h1>
@@ -12,7 +119,6 @@
   <div id="playlists"></div>
   <div id="recommendations"></div>
 
-  <!-- 👇 JS placed at the bottom so it runs AFTER button is in the DOM -->
   <script src="app.js"></script>
 </body>
 </html>
