@@ -140,9 +140,9 @@ async function fetchRecommendations(playlistId, token) {
     const recDataRaw = await recRes.json();
     console.log("Raw ReccoBeats response:", recDataRaw);
 
-    // --- Extract array from content property ---
-    const recData = Array.isArray(recDataRaw.content) ? recDataRaw.content : [];
-    if (recData.length === 0) return alert("No recommendations found from ReccoBeats.");
+    // --- Use content array directly ---
+    const recData = recDataRaw.content || [];
+    if (!Array.isArray(recData) || recData.length === 0) return alert("No recommendations found from ReccoBeats.");
 
     // --- Display recommendations ---
     const recContainer = document.getElementById("recommendations");
